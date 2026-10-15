@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>사과게임 🍎</title>
+<style>
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  body {
+    font-family: "Segoe UI", "Malgun Gothic", sans-serif;
+    background: linear-gradient(135deg, #a8e063 0%, #56ab2f 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .game-wrapper {
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+    padding: 24px;
+    max-width: 760px;
+    width: 100%;
+  }
+
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .title {
+    font-size: 28px;
+    font-weight: 800;
+    color: #e23b3b;
+    letter-spacing: 1px;
+  }
+
+  .stats {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+  }
+
+  .stat {
+    text-align: center;
+  }
+
+  .stat .label {
+    font-size: 12px;
+    color: #888;
+    font-weight: 600;
+  }
+
+  .stat .value {
+    font-size: 24px;
+    font-weight: 800;
+    color: #333;
+  }
+
+  /* Timer bar */
+  .timer-wrap {
+    background: #eee;
+    border-radius: 10px;
+    height: 14px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+
+  .timer-bar {
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, #56ab2f, #a8e063);
+    transition: width 0.1s linear;
+  }
+
+  /* Board */
+  .board-wrap {
+    position: relative;
+    display: flex;
+    justify-content: center;
+  }
+
+  .board {
+    display: grid;
+    gap: 4px;
+    background: #f3f7ee;
+    padding: 10px;
+    border-radius: 12px;
+    position: relative;
+    touch-action: none;
+  }
+
+  .cell {
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    border-radius: 50%;
+  }
+
+  .apple {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 32% 28%, #ff6b6b, #e23b3b 70%);
+    color: #fff;
+    font-weight: 700;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: inset -2px -3px 4px rgba(0, 0, 0, 0.25);
+    position: relative;
+    transition: transform 0.08s ease, opacity 0.15s ease;
+  }
+
+  .apple::before {
+    content: "";
+    position: absolute;
+    top: -5px;
+    width: 3px;
+    height: 7px;
+    background: #6b4226;
+    border-radius: 2px;
+  }
+
+  .cell.selected .apple {
+    transform: scale(1.12);
+    background: radial-gradient(circle at 32% 28%, #ffd36b, #f0a500 70%);
+  }
+
+  .cell.empty .apple {
+    opacity: 0;
+    transform: scale(0.2);
+    pointer-events: none;
+  }
+
+  /* Selection rectangle */
+  .selection-box {
+    position: absolute;
+    border: 2px solid #f0a500;
+    background: rgba(240, 165, 0, 0.15);
+    border-radius: 6px;
+    pointer-events: none;
+    display: none;
+    z-index: 5;
+  }
+
+  .selection-sum {
+    position: absolute;
+    top: -24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  /* Overlay */
+  .overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    z-index: 10;
+  }
+
+  .overlay.hidden {
+    display: none;
+  }
+
+  .overlay h2 {
+    font-size: 32px;
+    color: #e23b3b;
+  }
+
+  .overlay p {
+    font-size: 18px;
+    color: #555;
+  }
+
+  .btn {
+    background: #e23b3b;
+    color: #fff;
+    border: none;
+    padding: 12px 28px;
+    font-size: 18px;
+    font-weight: 700;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: transform 0.1s ease, background 0.2s ease;
+  }
+
+  .btn:hover {
+    background: #c62f2f;
+    transform: translateY(-2px);
+  }
+
+  .btn:active {
+    transform: translateY(0);
+  }
+
+  .footer {
+    margin-top: 16px;
+    text-align: center;
+    color: #888;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+  <div class="game-wrapper">
+    <div class="header">
+      <div class="title">🍎 사과게임</div>
+      <div class="stats">
+        <div class="stat">
+          <div class="label">점수</div>
+          <div class="value" id="score">0</div>
+        </div>
+        <div class="stat">
+          <div class="label">시간</div>
+          <div class="value" id="time">120</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="timer-wrap">
+      <div class="timer-bar" id="timerBar"></div>
+    </div>
+
+    <div class="board-wrap">
+      <div class="board" id="board"></div>
+      <div class="selection-box" id="selectionBox">
+        <div class="selection-sum" id="selectionSum">0</div>
+      </div>
+      <div class="overlay" id="overlay">
+        <h2 id="overlayTitle">🍎 사과게임</h2>
+        <p id="overlayText">합이 10이 되도록 사과를 드래그하세요!</p>
+        <button class="btn" id="startBtn">게임 시작</button>
+      </div>
+    </div>
+
+    <div class="footer">
+      드래그로 사각형 영역을 선택하세요. 선택한 사과들의 숫자 합이 <b>정확히 10</b>이면 사라지고 점수를 얻습니다.
+    </div>
+  </div>
+
+<script>
+  const COLS = 17;
+  const ROWS = 10;
+  const GAME_TIME = 120; // seconds
+
+  const boardEl = document.getElementById("board");
+  const scoreEl = document.getElementById("score");
+  const timeEl = document.getElementById("time");
+  const timerBar = document.getElementById("timerBar");
+  const selectionBox = document.getElementById("selectionBox");
+  const selectionSum = document.getElementById("selectionSum");
+  const overlay = document.getElementById("overlay");
+  const overlayTitle = document.getElementById("overlayTitle");
+  const overlayText = document.getElementById("overlayText");
+  const startBtn = document.getElementById("startBtn");
+
+  let grid = [];        // grid[r][c] = { value, removed, el, appleEl }
+  let score = 0;
+  let timeLeft = GAME_TIME;
+  let timerId = null;
+  let playing = false;
+
+  // drag state
+  let dragging = false;
+  let startX = 0, startY = 0;
+
+  boardEl.style.gridTemplateColumns = `repeat(${COLS}, 38px)`;
+  boardEl.style.gridTemplateRows = `repeat(${ROWS}, 38px)`;
+
+  function buildBoard() {
+    boardEl.innerHTML = "";
+    grid = [];
+    for (let r = 0; r < ROWS; r++) {
+      const row = [];
+      for (let c = 0; c < COLS; c++) {
+        const value = Math.floor(Math.random() * 9) + 1; // 1-9
+        const cell = document.createElement("div");
+        cell.className = "cell";
+        const apple = document.createElement("div");
+        apple.className = "apple";
+        apple.textContent = value;
+        cell.appendChild(apple);
+        boardEl.appendChild(cell);
+        row.push({ value, removed: false, el: cell, appleEl: apple });
+      }
+      grid.push(row);
+    }
+  }
+
+  function startGame() {
+    buildBoard();
+    score = 0;
+    timeLeft = GAME_TIME;
+    playing = true;
+    scoreEl.textContent = score;
+    timeEl.textContent = timeLeft;
+    timerBar.style.width = "100%";
+    overlay.classList.add("hidden");
+
+    if (timerId) clearInterval(timerId);
+    timerId = setInterval(tick, 1000);
+  }
+
+  function tick() {
+    timeLeft--;
+    timeEl.textContent = timeLeft;
+    timerBar.style.width = (timeLeft / GAME_TIME) * 100 + "%";
+    if (timeLeft <= 0) endGame();
+  }
+
+  function endGame() {
+    playing = false;
+    clearInterval(timerId);
+    timerId = null;
+    clearSelection();
+    overlayTitle.textContent = "⏰ 게임 종료!";
+    overlayText.textContent = `최종 점수: ${score}점`;
+    startBtn.textContent = "다시 하기";
+    overlay.classList.remove("hidden");
+  }
+
+  // ---- Drag selection ----
+  function getRelativePos(e) {
+    const rect = boardEl.getBoundingClientRect();
+    const point = e.touches ? e.touches[0] : e;
+    return {
+      x: point.clientX - rect.left,
+      y: point.clientY - rect.top,
+    };
+  }
+
+  function onDragStart(e) {
+    if (!playing) return;
+    e.preventDefault();
+    dragging = true;
+    const pos = getRelativePos(e);
+    startX = pos.x;
+    startY = pos.y;
+    selectionBox.style.display = "block";
+    updateSelectionBox(pos.x, pos.y);
+    updateSelection();
+  }
+
+  function onDragMove(e) {
+    if (!dragging) return;
+    e.preventDefault();
+    const pos = getRelativePos(e);
+    updateSelectionBox(pos.x, pos.y);
+    updateSelection();
+  }
+
+  function onDragEnd(e) {
+    if (!dragging) return;
+    dragging = false;
+    commitSelection();
+    clearSelection();
+  }
+
+  function updateSelectionBox(curX, curY) {
+    const left = Math.min(startX, curX);
+    const top = Math.min(startY, curY);
+    const width = Math.abs(curX - startX);
+    const height = Math.abs(curY - startY);
+    selectionBox.style.left = left + "px";
+    selectionBox.style.top = top + "px";
+    selectionBox.style.width = width + "px";
+    selectionBox.style.height = height + "px";
+  }
+
+  function getSelectedCells() {
+    const boxRect = selectionBox.getBoundingClientRect();
+    const selected = [];
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const cellData = grid[r][c];
+        if (cellData.removed) continue;
+        const cRect = cellData.el.getBoundingClientRect();
+        const cx = cRect.left + cRect.width / 2;
+        const cy = cRect.top + cRect.height / 2;
+        if (
+          cx >= boxRect.left &&
+          cx <= boxRect.right &&
+          cy >= boxRect.top &&
+          cy <= boxRect.bottom
+        ) {
+          selected.push(cellData);
+        }
+      }
+    }
+    return selected;
+  }
+
+  function updateSelection() {
+    // clear all highlight first
+    for (let r = 0; r < ROWS; r++)
+      for (let c = 0; c < COLS; c++)
+        grid[r][c].el.classList.remove("selected");
+
+    const selected = getSelectedCells();
+    let sum = 0;
+    selected.forEach((cell) => {
+      cell.el.classList.add("selected");
+      sum += cell.value;
+    });
+
+    selectionSum.textContent = sum;
+    selectionSum.style.background = sum === 10 ? "#2e9e2e" : "#333";
+  }
+
+  function commitSelection() {
+    const selected = getSelectedCells();
+    const sum = selected.reduce((acc, cell) => acc + cell.value, 0);
+    if (sum === 10 && selected.length > 0) {
+      selected.forEach((cell) => {
+        cell.removed = true;
+        cell.el.classList.add("empty");
+      });
+      score += selected.length;
+      scoreEl.textContent = score;
+    }
+  }
+
+  function clearSelection() {
+    selectionBox.style.display = "none";
+    for (let r = 0; r < ROWS; r++)
+      for (let c = 0; c < COLS; c++)
+        grid[r][c].el.classList.remove("selected");
+  }
+
+  // Mouse events
+  boardEl.addEventListener("mousedown", onDragStart);
+  window.addEventListener("mousemove", onDragMove);
+  window.addEventListener("mouseup", onDragEnd);
+
+  // Touch events
+  boardEl.addEventListener("touchstart", onDragStart, { passive: false });
+  boardEl.addEventListener("touchmove", onDragMove, { passive: false });
+  boardEl.addEventListener("touchend", onDragEnd);
+
+  startBtn.addEventListener("click", startGame);
+</script>
+</body>
+</html>
